@@ -398,7 +398,7 @@ export class ProjectScanner {
       const projectPath = path.join(this.projectsDir, baseDir);
       const sessionFilter = await this.getSessionFilterForProject(projectId);
       const shouldFilterNoise = this.fsProvider.type !== 'ssh';
-      const metadataLevel: SessionMetadataLevel = this.fsProvider.type === 'ssh' ? 'light' : 'deep';
+      const metadataLevel: SessionMetadataLevel = 'light';
 
       if (!(await this.fsProvider.exists(projectPath))) {
         return [];
@@ -484,9 +484,9 @@ export class ProjectScanner {
       const baseDir = extractBaseDir(projectId);
       const projectPath = path.join(this.projectsDir, baseDir);
       const sessionFilter = await this.getSessionFilterForProject(projectId);
-      const shouldFilterNoise = this.fsProvider.type !== 'ssh';
       const metadataLevel: SessionMetadataLevel =
         options?.metadataLevel ?? (this.fsProvider.type === 'ssh' ? 'light' : 'deep');
+      const shouldFilterNoise = this.fsProvider.type !== 'ssh' && metadataLevel === 'deep';
 
       if (!(await this.fsProvider.exists(projectPath))) {
         return { sessions: [], nextCursor: null, hasMore: false, totalCount: 0 };
