@@ -311,6 +311,37 @@ pnpm dist            # macOS + Windows + Linux
 
 ---
 
+## OpenClaw Integration (corpetty fork)
+
+This fork adds a dedicated **OpenClaw 🦝** tab for monitoring [OpenClaw](https://github.com/openclaw/openclaw) agents alongside your Claude Code sessions.
+
+### Features added
+
+- **Agent & Session Browser** — lists all OpenClaw agents, their sessions, and message history directly from `~/.openclaw/`
+- **Cron Job Panel** — view scheduled jobs, last run status, next run time, and delivery state
+- **Activity Feed** — live tool call stream showing tool name, arguments, and results (no more `[No Content]`)
+- **GPU Monitor** — real-time VRAM usage, Ollama status, and vLLM/ComfyUI status (polls every 3s)
+
+### Setup
+
+The integration reads from `OPENCLAW_HOME` (defaults to `~/.openclaw`). For Docker deployments, mount your OpenClaw data directory and set the env var:
+
+```yaml
+# docker-compose.yml
+environment:
+  - OPENCLAW_HOME=/home/youruser/.openclaw
+volumes:
+  - /home/youruser:/home/youruser:ro
+```
+
+No additional configuration needed — the tab auto-discovers agents and sessions from the standard OpenClaw directory layout.
+
+### GPU monitoring
+
+The `/api/gpu/status` endpoint polls `nvidia-smi`, Ollama (`localhost:11434`), vLLM (`localhost:8000`), and ComfyUI (`localhost:8188`). Requires `nvidia-smi` in PATH (or Docker with `runtime: nvidia`).
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines. Please read our [Code of Conduct](CODE_OF_CONDUCT.md).

@@ -9,7 +9,9 @@ import { createLogger } from '@shared/utils/logger';
 
 import { registerConfigRoutes } from './config';
 import { registerEventRoutes } from './events';
+import { registerGpuRoutes } from './gpu';
 import { registerNotificationRoutes } from './notifications';
+import { registerOpenClawRoutes } from './openclaw';
 import { registerProjectRoutes } from './projects';
 import { registerSearchRoutes } from './search';
 import { registerSessionRoutes } from './sessions';
@@ -58,6 +60,8 @@ export function registerHttpRoutes(
   registerSshRoutes(app, services.sshConnectionManager, sshModeSwitchCallback);
   registerUpdaterRoutes(app, services);
   registerEventRoutes(app);
+  registerOpenClawRoutes(app);
+  registerGpuRoutes(app);
 
   logger.info('All HTTP routes registered');
 }

@@ -114,6 +114,11 @@ export function registerUtilityRoutes(app: FastifyInstance): void {
     }
   );
 
+  // Active context — standalone always has a single local context
+  app.get('/api/contexts/active', async () => {
+    return 'local';
+  });
+
   // Open path - no-op in browser mode
   app.post('/api/open-path', async () => {
     return { success: false, error: 'Not available in browser mode' };

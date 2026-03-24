@@ -54,6 +54,25 @@
         }
       } catch(e) {}
     })();
+
+    // Polyfill crypto.randomUUID for non-secure HTTP contexts (LAN access).
+    // crypto.randomUUID() is restricted to secure contexts (HTTPS/localhost) in
+    // modern browsers. When serving over plain HTTP on a LAN IP, it is undefined.
+    // This polyfill uses crypto.getRandomValues() which IS available everywhere.
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID !== 'function') {
+      crypto.randomUUID = function() {
+        var bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+        bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant RFC4122
+        var hex = Array.from(bytes).map(function(b) {
+          return b.toString(16).padStart(2, '0');
+        });
+        return hex[0]+hex[1]+hex[2]+hex[3]+'-'+hex[4]+hex[5]+'-'+
+               hex[6]+hex[7]+'-'+hex[8]+hex[9]+'-'+
+               hex[10]+hex[11]+hex[12]+hex[13]+hex[14]+hex[15];
+      };
+    }
   </script>
 </head>
 <body>

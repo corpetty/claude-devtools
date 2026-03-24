@@ -15,15 +15,22 @@
 services:
   claude-devtools:
     build: .
-    ports:
-      - "3456:3456"
+    network_mode: host
+    runtime: nvidia
     volumes:
       - ${CLAUDE_DIR:-~/.claude}:/data/.claude:ro
+      # Mount the full home dir read-only so session path references resolve correctly.
+      # Sessions encode paths like /home/petty/.openclaw/workspace — without this,
+      # git branch detection, mentioned files, and context panels break.
+      - /home/petty:/home/petty:ro
     environment:
       - NODE_ENV=production
       - CLAUDE_ROOT=/data/.claude
       - HOST=0.0.0.0
       - PORT=3456
+      - OPENCLAW_HOME=/home/petty/.openclaw
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=utility
     restart: unless-stopped
     # Uncomment for maximum network isolation (no outbound connections):
     # network_mode: "none"

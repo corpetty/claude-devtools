@@ -19,6 +19,25 @@ import { DateGroupedSessions } from '../sidebar/DateGroupedSessions';
 
 import { SidebarHeader } from './SidebarHeader';
 
+const OpenClawButton = (): React.JSX.Element => {
+  const openTab = useStore((s) => s.openTab);
+
+  const handleClick = (): void => {
+    openTab({ type: 'openclaw', label: 'OpenClaw' });
+  };
+
+  return (
+    <button
+      type="button"
+      className="w-full border-t bg-transparent px-3 py-2 text-left text-sm text-zinc-400 transition-colors hover:bg-zinc-800/50 hover:text-zinc-200"
+      style={{ borderColor: 'var(--color-border)' }}
+      onClick={handleClick}
+    >
+      {'OpenClaw 🦝'}
+    </button>
+  );
+};
+
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
 const DEFAULT_WIDTH = 280;
@@ -105,6 +124,9 @@ export const Sidebar = (): React.JSX.Element | null => {
       <div className="flex-1 overflow-hidden">
         <DateGroupedSessions />
       </div>
+
+      {/* OpenClaw link */}
+      <OpenClawButton />
 
       {/* Resize handle */}
       <button

@@ -38,6 +38,9 @@ RUN corepack enable
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
+# Install sqlite3 CLI for LCM database queries
+RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 && rm -rf /var/lib/apt/lists/*
+
 # Copy built standalone server and renderer output
 COPY --from=builder /app/dist-standalone ./dist-standalone
 COPY --from=builder /app/out/renderer ./out/renderer
