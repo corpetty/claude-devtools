@@ -150,9 +150,16 @@ export const GeneralSection = ({
   const handleSelectClaudeRootFolder = useCallback(async (): Promise<void> => {
     setClaudeRootError(null);
 
-    const selection = await api.config.selectClaudeRootFolder();
+    let selection = await api.config.selectClaudeRootFolder();
     if (!selection) {
-      return;
+      // In browser/HTTP mode, native dialog unavailable — prompt for manual path
+      const manualPath = window.prompt('Enter the path to your .claude folder:', '~/.claude');
+      if (!manualPath || !manualPath.trim()) return;
+      selection = {
+        path: manualPath.trim(),
+        isClaudeDirName: manualPath.trim().endsWith('.claude'),
+        hasProjectsDir: true, // assume valid, let the backend validate
+      };
     }
 
     if (!selection.isClaudeDirName) {

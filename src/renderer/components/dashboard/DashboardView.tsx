@@ -201,35 +201,84 @@ const NewProjectCard = (): React.JSX.Element => {
       selectRepository: s.selectRepository,
     }))
   );
+  const [showPathInput, setShowPathInput] = React.useState(false);
+  const [manualPath, setManualPath] = React.useState('');
+
+  const handlePathSubmit = async (pathValue: string): Promise<void> => {
+    const trimmed = pathValue.trim();
+    if (!trimmed) return;
+    setShowPathInput(false);
+    setManualPath('');
+    await handlePathSelected(trimmed);
+  };
+
+  const handlePathSelected = async (selectedPath: string): Promise<void> => {
+    // Match selected path against known repository worktrees
+    for (const repo of repositoryGroups) {
+      for (const worktree of repo.worktrees) {
+        if (worktree.path === selectedPath) {
+          selectRepository(repo.id);
+          return;
+        }
+      }
+    }
+    // No match found - open the folder in file manager as fallback
+    const result = await api.openPath(selectedPath);
+    if (!result.success) {
+      logger.error('Failed to open folder:', result.error);
+    }
+  };
 
   const handleClick = async (): Promise<void> => {
     try {
       const selectedPaths = await api.config.selectFolders();
       if (!selectedPaths || selectedPaths.length === 0) {
-        return; // User cancelled
+        // In browser/HTTP mode, native dialog is unavailable — show text input instead
+        setShowPathInput(true);
+        return;
       }
 
       const selectedPath = selectedPaths[0];
 
-      // Match selected path against known repository worktrees
-      for (const repo of repositoryGroups) {
-        for (const worktree of repo.worktrees) {
-          if (worktree.path === selectedPath) {
-            selectRepository(repo.id);
-            return;
-          }
-        }
-      }
-
-      // No match found - open the folder in file manager as fallback
-      const result = await api.openPath(selectedPath);
-      if (!result.success) {
-        logger.error('Failed to open folder:', result.error);
-      }
+      await handlePathSelected(selectedPath);
     } catch (error) {
       logger.error('Error selecting folder:', error);
     }
   };
+
+  if (showPathInput) {
+    return (
+      <div className="flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-sm border border-dashed border-border bg-transparent p-4">
+        <span className="text-xs text-text-muted">Enter folder path:</span>
+        <input
+          type="text"
+          value={manualPath}
+          onChange={(e) => setManualPath(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void handlePathSubmit(manualPath);
+            if (e.key === 'Escape') { setShowPathInput(false); setManualPath(''); }
+          }}
+          placeholder="/home/user/projects/my-project"
+          className="w-full rounded border border-border bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-muted focus:border-border-emphasis focus:outline-none"
+          autoFocus
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={() => void handlePathSubmit(manualPath)}
+            className="rounded bg-surface px-3 py-1 text-xs text-text-primary hover:bg-surface-hover"
+          >
+            Open
+          </button>
+          <button
+            onClick={() => { setShowPathInput(false); setManualPath(''); }}
+            className="rounded px-3 py-1 text-xs text-text-muted hover:text-text-primary"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <button
