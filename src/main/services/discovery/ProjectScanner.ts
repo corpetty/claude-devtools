@@ -58,6 +58,9 @@ import type { FileSystemProvider, FsDirent } from '../infrastructure/FileSystemP
 
 const logger = createLogger('Discovery:ProjectScanner');
 
+/** How long to reuse the cached project list for search (ms) */
+const SEARCH_PROJECT_CACHE_TTL_MS = 30_000;
+
 export class ProjectScanner {
   private readonly projectsDir: string;
   private readonly todosDir: string;
@@ -77,6 +80,9 @@ export class ProjectScanner {
     string,
     { mtimeMs: number; size: number; preview: { text: string; timestamp: string } | null }
   >();
+
+  /** Cached project list for search — avoids re-scanning disk on every query */
+  private searchProjectCache: { projects: Project[]; timestamp: number } | null = null;
 
   // Delegated services
   private readonly fsProvider: FileSystemProvider;
@@ -398,7 +404,7 @@ export class ProjectScanner {
       const projectPath = path.join(this.projectsDir, baseDir);
       const sessionFilter = await this.getSessionFilterForProject(projectId);
       const shouldFilterNoise = this.fsProvider.type !== 'ssh';
-      const metadataLevel: SessionMetadataLevel = this.fsProvider.type === 'ssh' ? 'light' : 'deep';
+      const metadataLevel: SessionMetadataLevel = 'light';
 
       if (!(await this.fsProvider.exists(projectPath))) {
         return [];
@@ -484,9 +490,9 @@ export class ProjectScanner {
       const baseDir = extractBaseDir(projectId);
       const projectPath = path.join(this.projectsDir, baseDir);
       const sessionFilter = await this.getSessionFilterForProject(projectId);
-      const shouldFilterNoise = this.fsProvider.type !== 'ssh';
       const metadataLevel: SessionMetadataLevel =
         options?.metadataLevel ?? (this.fsProvider.type === 'ssh' ? 'light' : 'deep');
+      const shouldFilterNoise = this.fsProvider.type !== 'ssh' && metadataLevel === 'deep';
 
       if (!(await this.fsProvider.exists(projectPath))) {
         return { sessions: [], nextCursor: null, hasMore: false, totalCount: 0 };
@@ -748,6 +754,12 @@ export class ProjectScanner {
         ? firstMessageTimestampMs
         : birthtimeMs;
 
+    // If messages suggest ongoing but the file hasn't been written to in 5+ minutes,
+    // the session likely crashed/was killed — mark as dead (issue #94)
+    const STALE_SESSION_THRESHOLD_MS = 5 * 60 * 1000;
+    const isOngoing =
+      metadata.isOngoing && Date.now() - effectiveMtime < STALE_SESSION_THRESHOLD_MS;
+
     return {
       id: sessionId,
       projectId,
@@ -758,7 +770,7 @@ export class ProjectScanner {
       messageTimestamp: metadata.firstUserMessage?.timestamp,
       hasSubagents,
       messageCount: metadata.messageCount,
-      isOngoing: metadata.isOngoing,
+      isOngoing,
       gitBranch: metadata.gitBranch ?? undefined,
       metadataLevel,
       contextConsumption: metadata.contextConsumption,
@@ -1005,15 +1017,6 @@ export class ProjectScanner {
   }
 
   /**
-   * Checks if a session has subagent files (session-specific only).
-   * Only checks the NEW structure: {projectId}/{sessionId}/subagents/
-   * Verifies that at least one subagent file has non-empty content.
-   */
-  hasSubagentsSync(projectId: string, sessionId: string): boolean {
-    return this.subagentLocator.hasSubagentsSync(projectId, sessionId);
-  }
-
-  /**
    * Lists all subagent files for a session from both NEW and OLD structures.
    * Returns NEW structure files first, then OLD structure files.
    */
@@ -1087,8 +1090,17 @@ export class ProjectScanner {
         return { results: [], totalMatches: 0, sessionsSearched: 0, query };
       }
 
-      // Get all projects
-      const projects = await this.scan();
+      // Use cached project list to avoid re-scanning disk on every keystroke
+      let projects: Project[];
+      if (
+        this.searchProjectCache &&
+        Date.now() - this.searchProjectCache.timestamp < SEARCH_PROJECT_CACHE_TTL_MS
+      ) {
+        projects = this.searchProjectCache.projects;
+      } else {
+        projects = await this.scan();
+        this.searchProjectCache = { projects, timestamp: Date.now() };
+      }
 
       if (projects.length === 0) {
         return { results: [], totalMatches: 0, sessionsSearched: 0, query };
@@ -1096,7 +1108,7 @@ export class ProjectScanner {
 
       // Search across all projects with bounded concurrency
       const allResults: SearchSessionsResult[] = [];
-      const searchBatchSize = this.fsProvider.type === 'ssh' ? 2 : 4;
+      const searchBatchSize = this.fsProvider.type === 'ssh' ? 2 : 8;
 
       for (let i = 0; i < projects.length; i += searchBatchSize) {
         const batch = projects.slice(i, i + searchBatchSize);

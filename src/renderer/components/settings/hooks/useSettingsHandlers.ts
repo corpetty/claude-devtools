@@ -287,6 +287,8 @@ export function useSettingsHandlers({
           theme: 'dark',
           defaultTab: 'dashboard',
           claudeRootPath: null,
+          autoExpandAIGroups: false,
+          useNativeTitleBar: false,
         },
         display: {
           showTimestamps: true,

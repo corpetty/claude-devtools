@@ -424,8 +424,8 @@ function syncTrafficLightPosition(win: BrowserWindow): void {
  */
 function createWindow(): void {
   const isMac = process.platform === 'darwin';
-  const isLinux = process.platform === 'linux';
   const iconPath = isMac ? undefined : getWindowIconPath();
+  const useNativeTitleBar = !isMac && configManager.getConfig().general.useNativeTitleBar;
   mainWindow = new BrowserWindow({
     width: DEFAULT_WINDOW_WIDTH,
     height: DEFAULT_WINDOW_HEIGHT,
@@ -436,7 +436,7 @@ function createWindow(): void {
       contextIsolation: true,
     },
     backgroundColor: '#1a1a1a',
-    ...(isLinux ? {} : { titleBarStyle: 'hidden' as const }),
+    ...(useNativeTitleBar ? {} : { titleBarStyle: 'hidden' as const }),
     ...(isMac && { trafficLightPosition: getTrafficLightPositionForZoom(1) }),
     title: 'claude-devtools',
   });
@@ -481,7 +481,26 @@ function createWindow(): void {
   const ZOOM_OUT_KEYS = new Set(['-', '_']);
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    if (!input.meta || input.type !== 'keyDown') return;
+
+    if (input.type !== 'keyDown') return;
+
+    // Intercept Ctrl+R / Cmd+R to prevent Chromium's built-in page reload,
+    // then notify the renderer via IPC so it can refresh the session (fixes #58, #85).
+    // We must preventDefault here because Chromium handles Ctrl+R at the browser
+    // engine level, which also blocks the keydown from reaching the renderer —
+    // hence the IPC bridge.
+    if ((input.control || input.meta) && !input.shift && input.key.toLowerCase() === 'r') {
+      event.preventDefault();
+      mainWindow.webContents.send('session:refresh');
+      return;
+    }
+    // Also block Ctrl+Shift+R (hard reload)
+    if ((input.control || input.meta) && input.shift && input.key.toLowerCase() === 'r') {
+      event.preventDefault();
+      return;
+    }
+
+    if (!input.meta) return;
 
     const currentLevel = mainWindow.webContents.getZoomLevel();
 

@@ -395,6 +395,9 @@ export interface ElectronAPI {
   onFileChange: (callback: (event: FileChangeEvent) => void) => () => void;
   onTodoChange: (callback: (event: FileChangeEvent) => void) => () => void;
 
+  // Session refresh (Ctrl+R / Cmd+R intercepted by main process)
+  onSessionRefresh: (callback: () => void) => () => void;
+
   // Shell operations
   openPath: (
     targetPath: string,
@@ -408,6 +411,7 @@ export interface ElectronAPI {
     maximize: () => Promise<void>;
     close: () => Promise<void>;
     isMaximized: () => Promise<boolean>;
+    relaunch: () => Promise<void>;
   };
 
   // Updater API

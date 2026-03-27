@@ -181,6 +181,8 @@ export interface GeneralConfig {
   theme: 'dark' | 'light' | 'system';
   defaultTab: 'dashboard' | 'last-session';
   claudeRootPath: string | null;
+  autoExpandAIGroups: boolean;
+  useNativeTitleBar: boolean;
 }
 
 export interface DisplayConfig {
@@ -248,6 +250,8 @@ const DEFAULT_CONFIG: AppConfig = {
     theme: 'dark',
     defaultTab: 'dashboard',
     claudeRootPath: null,
+    autoExpandAIGroups: false,
+    useNativeTitleBar: false,
   },
   display: {
     showTimestamps: true,
@@ -314,7 +318,18 @@ export class ConfigManager {
 
   constructor(configPath?: string) {
     this.configPath = configPath ?? DEFAULT_CONFIG_PATH;
-    this.config = this.loadConfig();
+    this.config = this.deepClone(DEFAULT_CONFIG);
+    this.triggerManager = new TriggerManager(this.config.notifications.triggers, () =>
+      this.saveConfig()
+    );
+  }
+
+  /**
+   * Asynchronously initializes the config by loading from disk.
+   * Must be called after construction before the instance is used.
+   */
+  async initialize(): Promise<void> {
+    this.config = await this.loadConfig();
     setClaudeBasePathOverride(this.config.general.claudeRootPath);
     this.triggerManager = new TriggerManager(this.config.notifications.triggers, () =>
       this.saveConfig()
@@ -327,10 +342,23 @@ export class ConfigManager {
 
   /**
    * Gets the singleton instance of ConfigManager.
+   * If the instance hasn't been initialized yet, creates one with default config.
+   * Prefer using initializeInstance() at app startup to load config from disk.
    */
   static getInstance(): ConfigManager {
     ConfigManager.instance ??= new ConfigManager();
     return ConfigManager.instance;
+  }
+
+  /**
+   * Creates and initializes the singleton instance asynchronously.
+   * Loads configuration from disk. Call this at app startup.
+   */
+  static async initializeInstance(configPath?: string): Promise<ConfigManager> {
+    const instance = new ConfigManager(configPath);
+    await instance.initialize();
+    ConfigManager.instance = instance;
+    return instance;
   }
 
   /**
@@ -345,17 +373,19 @@ export class ConfigManager {
   // ===========================================================================
 
   /**
-   * Loads configuration from disk.
+   * Loads configuration from disk asynchronously.
    * Returns default config if file doesn't exist or is invalid.
    */
-  private loadConfig(): AppConfig {
+  private async loadConfig(): Promise<AppConfig> {
     try {
-      if (!fs.existsSync(this.configPath)) {
+      try {
+        await fs.promises.access(this.configPath);
+      } catch {
         logger.info('No config file found, using defaults');
         return this.deepClone(DEFAULT_CONFIG);
       }
 
-      const content = fs.readFileSync(this.configPath, 'utf8');
+      const content = await fs.promises.readFile(this.configPath, 'utf8');
       const parsed = JSON.parse(content) as Partial<AppConfig>;
 
       // Merge with defaults to ensure all fields exist
@@ -924,8 +954,8 @@ export class ConfigManager {
    * Useful if config was modified externally.
    * @returns Updated config
    */
-  reload(): AppConfig {
-    this.config = this.loadConfig();
+  async reload(): Promise<AppConfig> {
+    this.config = await this.loadConfig();
     setClaudeBasePathOverride(this.config.general.claudeRootPath);
     this.triggerManager.setTriggers(this.config.notifications.triggers);
     logger.info('Config reloaded from disk');
@@ -937,5 +967,8 @@ export class ConfigManager {
 // Singleton Export
 // ===========================================================================
 
-/** Singleton instance for convenience */
+/** Singleton instance promise - resolves to an initialized ConfigManager */
+export const configManagerPromise = ConfigManager.initializeInstance();
+
+/** Singleton instance for convenience (synchronous access, uses defaults until initialized) */
 export const configManager = ConfigManager.getInstance();

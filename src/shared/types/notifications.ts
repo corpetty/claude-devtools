@@ -262,6 +262,10 @@ export interface AppConfig {
     defaultTab: 'dashboard' | 'last-session';
     /** Optional custom Claude root folder (auto-detected when null) */
     claudeRootPath: string | null;
+    /** Whether to auto-expand AI response groups when opening a transcript or receiving new messages */
+    autoExpandAIGroups: boolean;
+    /** Whether to use the native OS title bar instead of the custom one (Linux/Windows) */
+    useNativeTitleBar: boolean;
   };
   /** Display and UI settings */
   display: {

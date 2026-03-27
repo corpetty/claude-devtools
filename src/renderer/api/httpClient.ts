@@ -490,6 +490,11 @@ export class HttpAPIClient implements ElectronAPI {
   onTodoChange = (callback: (event: FileChangeEvent) => void): (() => void) =>
     this.addEventListener('todo-change', callback);
 
+  // No-op in browser mode — Ctrl+R refresh is Electron-only
+  onSessionRefresh = (_callback: () => void): (() => void) => {
+    return () => {};
+  };
+
   // ---------------------------------------------------------------------------
   // Shell operations (browser fallbacks)
   // ---------------------------------------------------------------------------
@@ -512,6 +517,7 @@ export class HttpAPIClient implements ElectronAPI {
     maximize: async (): Promise<void> => {},
     close: async (): Promise<void> => {},
     isMaximized: async (): Promise<boolean> => false,
+    relaunch: async (): Promise<void> => {},
   };
 
   // ---------------------------------------------------------------------------
