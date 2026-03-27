@@ -46,6 +46,7 @@ interface AgentListProps {
   onShowCrons: () => void;
   onShowActivity: () => void;
   onShowGpu: () => void;
+  onShowSystem: () => void;
 }
 
 export const AgentList = ({
@@ -54,6 +55,7 @@ export const AgentList = ({
   onShowCrons,
   onShowActivity,
   onShowGpu,
+  onShowSystem,
 }: AgentListProps): React.JSX.Element => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,6 +123,13 @@ export const AgentList = ({
         onClick={onShowGpu}
       >
         GPU Monitor
+      </button>
+      <button
+        type="button"
+        className="border-t border-zinc-800 bg-transparent px-3 py-2.5 text-left text-sm text-zinc-400 transition-colors hover:bg-zinc-800/50 hover:text-zinc-200"
+        onClick={onShowSystem}
+      >
+        System Monitor
       </button>
     </div>
   );

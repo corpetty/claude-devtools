@@ -120,6 +120,34 @@ async function fetchVllm(): Promise<ServiceStatus> {
   }
 }
 
+async function fetchShortsApi(): Promise<ServiceStatus> {
+  try {
+    const [healthRes, jobsRes] = await Promise.all([
+      fetch('http://localhost:8765/health', { signal: AbortSignal.timeout(2000) }),
+      fetch('http://localhost:8765/jobs', { signal: AbortSignal.timeout(2000) }),
+    ]);
+
+    if (!healthRes.ok) throw new Error(`HTTP ${healthRes.status}`);
+
+    const jobsData = jobsRes.ok
+      ? ((await jobsRes.json()) as { status: string; stage?: string }[])
+      : [];
+
+    const activeJobs = jobsData.filter((j) => j.status === 'running' || j.status === 'pending');
+    const runningJob = jobsData.find((j) => j.status === 'running');
+
+    return {
+      name: 'shorts-api',
+      running: true,
+      queueRunning: jobsData.filter((j) => j.status === 'running').length,
+      queuePending: jobsData.filter((j) => j.status === 'pending').length,
+      loadedModel: runningJob?.stage ?? (activeJobs.length > 0 ? 'working' : undefined),
+    };
+  } catch {
+    return { name: 'shorts-api', running: false };
+  }
+}
+
 async function fetchComfyui(): Promise<ServiceStatus> {
   try {
     const [statsRes, queueRes] = await Promise.all([
@@ -156,16 +184,17 @@ async function fetchComfyui(): Promise<ServiceStatus> {
 
 export function registerGpuRoutes(app: FastifyInstance): void {
   app.get('/api/gpu/status', async (): Promise<GpuStatus> => {
-    const [gpus, ollama, vllm, comfyui] = await Promise.all([
+    const [gpus, ollama, vllm, comfyui, shortsApi] = await Promise.all([
       Promise.resolve(parseNvidiaSmi()),
       fetchOllama(),
       fetchVllm(),
       fetchComfyui(),
+      fetchShortsApi(),
     ]);
 
     return {
       gpus,
-      services: [ollama, vllm, comfyui],
+      services: [ollama, vllm, comfyui, shortsApi],
       fetchedAt: Date.now(),
     };
   });

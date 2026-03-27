@@ -17,6 +17,7 @@ import { registerSearchRoutes } from './search';
 import { registerSessionRoutes } from './sessions';
 import { registerSshRoutes } from './ssh';
 import { registerSubagentRoutes } from './subagents';
+import { registerSystemRoutes } from './system';
 import { registerUpdaterRoutes } from './updater';
 import { registerUtilityRoutes } from './utility';
 import { registerValidationRoutes } from './validation';
@@ -62,6 +63,7 @@ export function registerHttpRoutes(
   registerEventRoutes(app);
   registerOpenClawRoutes(app);
   registerGpuRoutes(app);
+  registerSystemRoutes(app);
 
   logger.info('All HTTP routes registered');
 }

@@ -9,8 +9,9 @@ import { GpuPanel } from './GpuPanel';
 import { SessionContextSidebar } from './SessionContextSidebar';
 import { SessionList } from './SessionList';
 import { SessionView } from './SessionView';
+import { SystemPanel } from './SystemPanel';
 
-type ViewMode = 'sessions' | 'crons' | 'activity' | 'gpu';
+type ViewMode = 'sessions' | 'crons' | 'activity' | 'gpu' | 'system';
 
 export const OpenClawView = (): React.JSX.Element => {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -45,6 +46,13 @@ export const OpenClawView = (): React.JSX.Element => {
     setShowContext(false);
   };
 
+  const handleShowSystem = (): void => {
+    setSelectedAgentId(null);
+    setSelectedSessionId(null);
+    setViewMode('system');
+    setShowContext(false);
+  };
+
   const handleSelectSession = (
     agentId: string | null,
     sessionId: string,
@@ -58,8 +66,7 @@ export const OpenClawView = (): React.JSX.Element => {
     setShowContext(true);
   };
 
-  const showContextPanel =
-    showContext && selectedAgentId != null && selectedSessionId != null;
+  const showContextPanel = showContext && selectedAgentId != null && selectedSessionId != null;
 
   return (
     <div className="flex size-full bg-[#111113]">
@@ -71,6 +78,7 @@ export const OpenClawView = (): React.JSX.Element => {
           onShowCrons={handleShowCrons}
           onShowActivity={handleShowActivity}
           onShowGpu={handleShowGpu}
+          onShowSystem={handleShowSystem}
         />
       </div>
 
@@ -97,7 +105,9 @@ export const OpenClawView = (): React.JSX.Element => {
         {/* Content area */}
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            {viewMode === 'gpu' ? (
+            {viewMode === 'system' ? (
+              <SystemPanel />
+            ) : viewMode === 'gpu' ? (
               <GpuPanel />
             ) : viewMode === 'crons' ? (
               <CronJobsPanel />

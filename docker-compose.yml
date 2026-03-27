@@ -31,6 +31,7 @@ services:
       - OPENCLAW_HOME=/home/petty/.openclaw
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=utility
+    pid: host
     restart: unless-stopped
     # Uncomment for maximum network isolation (no outbound connections):
     # network_mode: "none"

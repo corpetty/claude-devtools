@@ -150,6 +150,13 @@ function ServiceBadge({ service }: { service: ServiceStatus }): React.JSX.Elemen
       {service.running && service.name === 'vLLM' && service.loadedModel && (
         <span className="text-[10px] text-zinc-500 truncate max-w-[120px]">{service.loadedModel}</span>
       )}
+      {service.running && service.name === 'shorts-api' && (
+        <span className="text-[10px] text-zinc-500">
+          {(service.queueRunning ?? 0) + (service.queuePending ?? 0) > 0
+            ? `${service.queueRunning}r/${service.queuePending}q${service.loadedModel ? ` · ${service.loadedModel}` : ''}`
+            : 'idle'}
+        </span>
+      )}
     </div>
   );
 }
